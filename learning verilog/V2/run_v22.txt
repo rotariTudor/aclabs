@@ -1,0 +1,37 @@
+# Adaugă toate fișierele Verilog
+set sourcefiles {v22.v}
+
+# Setează numele modulului de top
+set topmodule register_tb
+
+###################################################
+##### DO NOT MODIFY THE SCRIPT BELOW THIS LINE ####
+###################################################
+
+# Oprește simularea curentă dacă există una
+quit -sim
+
+# Șterge biblioteca `work` dacă există
+if {[file exists work]} {vdel -all}
+
+# Creează o nouă bibliotecă `work`
+vlib work
+
+# Compilează fișierele sursă
+set result [catch {vlog $sourcefiles} errmsg]
+if {$result != 0} {
+    puts "Correct the compilation errors: $errmsg"
+    return
+}
+
+# Încarcă modulul de testbench
+vsim -voptargs=+acc $topmodule
+
+# Adaugă toate semnalele în fereastra de unde
+add wave *
+
+# Rulează simularea până la capăt
+run -all
+
+# Oprește simularea la final
+quit -sim

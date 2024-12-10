@@ -1,0 +1,67 @@
+module rgst #(
+      parameter w=8
+      )(
+      input clk, rst_b,ld,clr, 
+      input [w-1:0]d,
+      output reg[w-1:0]q
+);
+  always@(posedge clk, negedge rst_b)begin
+    if(!rst_b) q<=0;
+    if(clr) q<=0;
+    if(ld) q<=d;
+  end
+endmodule
+
+module fdivby5(
+    input clk, rst_b, ld, clr,
+    output fdclk
+);
+    wire [2:0] q;
+
+    rgst #(
+        .w(3)
+    ) reg1 (
+        .clk(clk),
+        .rst_b(rst_b),
+        .ld(ld),
+        .clr(clr | q[2]),
+        .d({q[2] ^ (q[1] & q[0]), q[0] ^ q[1], ~q[0]}),
+        .q(q)
+    );
+
+    assign fdclk = ~(q[2] | q[1] | q[0]);
+endmodule
+
+
+module fdivby5_tb;
+    reg clk, rst_b, ld, clr;
+    wire fdclk;
+
+    fdivby5 CUT(.clk(clk), .rst_b(rst_b), .ld(ld), .clr(clr), .fdclk(fdclk));
+
+    initial begin
+        clk = 0; 
+        rst_b = 0; 
+        clr = 0; 
+        ld = 1;
+    end
+
+    integer i;
+
+    initial begin
+        for (i = 0; i < 30; i = i + 1) begin
+            #25 clk = ~clk; // Toggle clock every 25 time units
+        end
+    end
+
+    initial begin
+        #50 rst_b = 1; // Deassert reset after 50 time units
+    end
+
+    initial begin
+        #600 clr = 1;
+        #100 clr = 0;
+        #500 clr = 1;
+        #100 clr = 0;
+    end
+endmodule

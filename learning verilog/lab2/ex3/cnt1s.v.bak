@@ -1,0 +1,22 @@
+module cnt1s (
+  input [5:0] i,
+  output [/*replace with width of output o here*/:0] o
+);
+  //write Verilog code here
+endmodule
+
+module cnt1s_tb;
+  reg [5:0] i;
+  wire [/*replace with correct width of output o here*/:0] o;
+
+  cnt1s cnt1s_i (.i(i), .o(o));
+
+  integer k;
+  initial begin
+    $display("Time\ti\t\to");
+    $monitor("%0t\t%b(%2d)\t%b(%0d)", $time, i, i, o, o);
+    i = 0;
+    for (k = 1; k < 64; k = k + 1)
+      #10 i = k;
+  end
+endmodule

@@ -1,0 +1,79 @@
+` include "../ex1.v"
+
+module lfsrb4(
+  input clk,
+  input reset_b,
+  input [3:0]d,
+  output [3:0]q
+);
+
+  genvar i;
+  generate
+    for(i=0;i<4;i=i+1) begin : dffLoop
+      if(i == 0) dff ff0(.clk(clk), .set_b(reset_b), .d(q[3]), .q(q[0]));
+      else dff ff(.clk(clk), .set_b(reset_b), .d(q[i-1] ^ q[3]), .q(q[i]));
+    end
+  endgenerate
+
+endmodule
+
+module ora(
+  input clk,
+  input reset_b,
+  input [3:0]in,
+  output [3:0]q
+);
+
+  genvar i;
+  generate
+    for(i=0;i<4;i=i+1) begin : sisrLoop
+      if(i == 0) dff ff0(.clk(clk), .set_b(reset_b), .d(^in ^ q[3]), .q(q[i]));
+      else if(i == 1) dff ff1(.clk(clk), .set_b(reset_b), .d(q[3] ^ q[0]), .q(q[i]));
+      else dff ff(.clk(clk), .set_b(reset_b), .d(q[i-1]), .q(q[i]));
+    end
+  endgenerate
+
+endmodule
+
+module ex3(
+  input clk,
+  input reset_b,
+  output [3:0]out
+);
+
+  wire [3:0]lfsrOut, ex1Out;
+  
+  lfsrb4 lfsr(.clk(clk), .reset_b(reset_b), .q(lfsrOut));
+  
+  ex1 e(.i(lfsrOut), .o(ex1Out));
+  
+  ora orra(.clk(clk), .reset_b(reset_b), .in(ex1Out), .q(out));
+
+endmodule
+
+module ex3_tb;
+  
+  reg clk, reset_b;
+  wire [3:0]out;
+  
+  ex3 dut(.clk(clk), .reset_b(reset_b), .out(out));
+  
+  parameter CLOCK_PERIOD = 100;
+  parameter CLOCK_REPEAT = 31;
+  
+  initial begin
+    clk = 0;
+    reset_b = 0;
+  end
+  
+  integer k;
+  initial begin
+    for(k=0;k<CLOCK_REPEAT*2;k=k+1) begin
+      #(CLOCK_PERIOD/2) clk = ~clk;
+    end
+  end
+  
+  initial #25 reset_b = 1;
+
+endmodule
+  

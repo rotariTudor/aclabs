@@ -1,0 +1,17 @@
+# Create the work library
+vlib work
+
+# Compile the design and testbench
+vlog rgst.v tb_rgst.v
+
+# Run the simulation
+vsim tb_rgst
+
+# Add all signals to waveform viewer
+add wave -position insertpoint sim:/tb_rgst/*
+
+# Run for sufficient time
+run 100ns
+
+# End the simulation
+quit

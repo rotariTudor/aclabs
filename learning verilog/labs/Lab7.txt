@@ -1,0 +1,146 @@
+//1
+module cntr #(parameter w=8)(
+	input clk, rst_b,c_up,clr,
+	output reg [w-1:0] q
+);
+	always @ (posedge clk, negedge rst_b)
+		if (!rst_b)			q <= 0;
+		else if (c_up)			q <= q+1;
+		else if (clr)			q <= 0;
+endmodule
+
+//2
+module dec #(parameter w=2)(
+	input [w-1:0] s,
+	input e,
+	output reg [2**w-1:0] o
+);
+	always @ (*) begin
+		o = 0;
+		if (e)
+  		  o[s] = 1;
+	end
+endmodule
+
+//3
+module pktmux(
+  input [63:0] pkt,msg_len,
+  input pad_pkt,zero_pkt,mgln_pkt,
+  output reg [63:0] o
+);
+  always @ (*)
+    if (pad_pkt == 1)         o=(1<<63);
+    else if (zero_pkt == 1)   o=0;
+    else if (mgln_pkt == 1)   o=msg_len;
+    else                      o=pkt;
+endmodule
+
+module pktmux_tb;
+  reg [63:0] pkt,msg_len;
+  reg pad_pkt,zero_pkt,mgln_pkt;
+  wire [63:0] o;
+  
+  pktmux insta1(.pkt(pkt),.msg_len(msg_len),.pad_pkt(pad_pkt),
+      .zero_pkt(zero_pkt),.mgln_pkt(mgln_pkt),.o(o));
+  localparam CYCLE=100;
+  initial begin
+    {pad_pkt,zero_pkt,mgln_pkt}=0;
+    repeat (3) begin
+      #(1*CYCLE) {pad_pkt,zero_pkt,mgln_pkt}=4;
+      #(1*CYCLE) {pad_pkt,zero_pkt,mgln_pkt}=2;
+      #(1*CYCLE) {pad_pkt,zero_pkt,mgln_pkt}=1;
+      #(1*CYCLE) {pad_pkt,zero_pkt,mgln_pkt}=0;
+    end
+  end
+  task urand64(output reg [63:0] r);
+    begin
+      r[63:32]=$urandom();
+      r[31:0]=$urandom();
+    end
+  endtask
+  integer k;
+  initial begin
+    urand64(pkt);
+    urand64(msg_len);
+    for(k=1; k<13; k=k+1) begin
+      #(1*CYCLE);
+      urand64(pkt);
+      urand64(msg_len);
+    end
+  end
+endmodule
+
+//4
+module regfl(
+  input clk,rst_b,we,
+  input [2:0] s,
+  input [63:0] d,
+  output [511:0] q
+);
+  wire [7:0] dout;
+  dec #(.w(3)) inst1(.s(s),.e(we),.o(dout));
+  generate
+    genvar i;
+    for (i=0; i<8; i=i+1) begin:v
+      rgst #(.w(64)) gi(.clk(clk),.rst_b(rst_b),.clr(1'b0),.d(d),.ld(dout[i]),
+          .q(q[511-i*64:448-i*64]));
+    end
+  endgenerate
+endmodule
+
+module regfl_tb;
+  reg clk,rst_b,we;
+  reg [2:0] s;
+  reg [63:0] d;
+  wire [511:0] q;
+  
+  regfl inst1(.clk(clk),.rst_b(rst_b),.we(we),.s(s),.d(d),.q(q));
+  localparam CLK_PERIOD=100;
+  localparam RUNNING_CYCLES=13;
+  initial begin
+    $display("time\tclk\trst_b\ts\twe\td\t\t\t\tq");
+    $monitor("%4t\t%b\t%b\t%h\t%b\t%h\t%h",$time,clk,rst_b,s,we,d,q);
+    clk=0;
+    repeat (2*RUNNING_CYCLES) #(CLK_PERIOD/2) clk=~clk;
+  end
+  localparam RST_DURATION=25;
+  initial begin
+    rst_b=0;
+    #RST_DURATION rst_b=1;
+  end
+  initial begin
+    we=1;
+    #(6*CLK_PERIOD) we=~we;
+    #(1*CLK_PERIOD) we=~we;
+  end
+  initial begin
+    s=$urandom();
+    repeat (12)
+      #(1*CLK_PERIOD) s=$urandom();
+  end
+  task urand64(output reg [63:0] r);
+    begin
+      r[63:32]=$urandom();
+      r[31:0]=$urandom();
+    end
+  endtask
+  initial begin
+    urand64(d);
+    repeat (12)
+      #(1*CLK_PERIOD) urand64(d);
+  end
+endmodule
+
+//5
+module rgst #(
+	parameter w=8
+)(
+	input clk, rst_b, ld, clr,
+	input [w-1:0] d,
+	output reg [w-1:0] q
+);
+	always @ (posedge clk, negedge rst_b)
+		if (!rst_b)			q <= 0;
+		else if (clr)			q <= 0;
+		else if (ld)			q <= d;
+endmodule

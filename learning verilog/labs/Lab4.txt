@@ -1,0 +1,210 @@
+//1
+module add2b (
+    input [1:0] x, y, 
+    input ci,
+    output [1:0] z, 
+    output co
+);
+    wire c1;
+    fac inst1 (.x(x[0]), .y(y[0]), .ci(ci), .co(c1), .z(z[0]));
+    fac inst2 (.x(x[1]), .y(y[1]), .ci(c1), .co(co), .z(z[1]));
+endmodule
+
+module fac(
+    input x, y, ci,
+    output co, z
+);
+    assign {co, z} = x + y + ci;
+endmodule
+
+module add2b_tb;
+    reg [1:0] x, y; 
+    reg ci;
+    wire [1:0] z;
+    wire co;
+
+    add2b cut (.x(x), .y(y), .ci(ci), .co(co), .z(z));
+
+    integer k;
+    initial begin
+        $display("Time\tx\t\ty\tci\t\tco\tz");
+        // Pentru valori pe 2 biti se va afisa, in paranteza) valoarea zecimala corespunzatoare
+        // Rezultatul va fi afisat, intre paranteze, ca valoare zecimala corespunzatoare
+        $monitor("%0t\t%b(%d)\t%b(%d)\t%b\t\t%b\t%b", $time, x, x, y, y, ci, co, z);
+        
+        // Generarea exhaustiva a tuturor configuratiilor de intrare (modulul add2b are 5 biti de intrare: 
+        //     2 pentru x, 2 pentru y, 1 pentru ci, in consecinta exista 2^5 = 32)
+        for (k = 0; k < 32; k = k + 1) begin
+            {x, y, ci} = k;
+            #10;
+        end
+    end
+endmodule
+
+//2
+// Modul aditional, de adunare a doua numere pe 4 biti
+module add4b (
+    input [3:0] x, y, input ci,
+    output [3:0] z, output co
+);
+    wire c2;
+    add2b inst1 (.x(x[1:0]), .y(y[1:0]), .ci(ci), .co(c2), .z(z[1:0]));
+    add2b inst2 (.x(x[3:2]), .y(y[3:2]), .ci(c2), .co(co), .z(z[3:2]));
+endmodule
+
+// Modul de adunare a doua numere in C1 pe 4 biti
+module c1_add4b (
+    input [3:0] x, y, input ci,
+    output [3:0] z
+);
+    // Semnal pentru rezultatul intermediar al adunarii intre x si y
+    wire [3:0] temp; 
+    // Semnal pentru end around carry, de adunat rezultatului intermediar
+    wire co;
+    add4b inst1 (.x(x), .y(y), .ci(ci), .co(co), .z(temp));
+    add4b inst2 (.x(temp), .y(4'd0), .ci(co), .co(), .z(z));
+endmodule
+
+
+
+module add2b (
+    input [1:0] x, y, 
+    input ci,
+    output [1:0] z, 
+    output co
+);
+    wire c1;
+    fac inst1 (.x(x[0]), .y(y[0]), .ci(ci), .co(c1), .z(z[0]));
+    fac inst2 (.x(x[1]), .y(y[1]), .ci(c1), .co(co), .z(z[1]));
+endmodule
+
+module fac(
+    input x, y, ci,
+    output co, z
+);
+    assign {co, z} = x + y + ci;
+endmodule
+
+
+module c1add4b_tb;
+    reg [3:0] x, y; reg ci;
+    wire [3:0] z; wire co;
+
+    c1_add4b cut (.x(x), .y(y), .ci(ci), .z(z));
+
+    function integer ToDecimal(input [3:0] c1_val); 
+    begin
+        if (c1_val[3])
+            ToDecimal = {{29{c1_val[3]}}, c1_val[2:0]} + 1'd1;
+        else
+            ToDecimal = c1_val[2:0];
+    end
+    endfunction
+
+    integer k;
+    initial begin
+        $display("Time\tx\ty\t\tci\t\tz");
+        $monitor("%0t\t%b\t%b\t%b\t%b", $time, x, y, ci, z);
+        
+        for (k = 0; k < 512; k = k + 1) begin
+            {x, y, ci} = k;
+            #10;
+        end
+    end
+endmodule
+
+//3
+module cmp2b (
+    input [1:0] x, y,
+    output eq, lt, gt
+);
+    assign eq = (x[1] ~^ y[1]) & (x[0] ~^ y[0]);
+    assign lt = ~x[1]&y[1] | (x[1] ~^ y[1])&(~x[0])&y[0];
+    assign gt = ~y[1]&x[1] | (y[1] ~^ x[1])&(~y[0])&x[0];
+endmodule
+
+// Fara tesbench; corecta functionare a acestui modul va fi testata in Problema urmatoare
+
+//4
+module cmp4b (
+    input [3:0] x, y,
+    output eq, lt, gt
+);
+    wire eq_low, eq_high, lt_high, lt_low, gt_high, gt_low;
+    cmp2b inst1(.x(x[1:0]), .y(y[1:0]), .eq(eq_low), .lt(lt_low), .gt(gt_low));
+    cmp2b inst2(.x(x[3:2]), .y(y[3:2]), .eq(eq_high), .lt(lt_high), .gt(gt_high));
+    assign eq = eq_high & eq_low;
+    assign lt = lt_high | (eq_high & lt_low);
+    assign gt = gt_high | (eq_high & gt_low);
+endmodule
+
+
+module cmp2b (
+    input [1:0] x, y,
+    output eq, lt, gt
+);
+    assign eq = (x[1] ~^ y[1]) & (x[0] ~^ y[0]);
+    assign lt = ~x[1]&y[1] | (x[1] ~^ y[1])&(~x[0])&y[0];
+    assign gt = ~y[1]&x[1] | (y[1] ~^ x[1])&(~y[0])&x[0];
+endmodule
+
+module cmp4b_tb;
+    reg [3:0] x, y; 
+    wire eq, lt, gt;
+
+    cmp4b cut (.x(x), .y(y), .eq(eq), .lt(lt), .gt(gt));
+
+    integer k;
+    initial begin
+        $display("Time\tx\ty\t\teq\tlt\tgt");
+        $monitor("%0t\t%b(%d)\t%b(%d)\t\t%b\t%b\t%b", $time, x, x, y, y, eq, lt, gt);
+        
+        for (k = 0; k < 256; k = k + 1) begin
+            {x, y} = k;
+            #10;
+        end
+    end
+endmodule
+
+//5
+// Solutie Problema 1
+module fac (
+    input x, y, ci,
+    output co, z
+);
+    assign {co, z} = x + y + ci;
+endmodule
+
+// Solutie Problema 2 (partea I)
+module fac_tb;
+    // Pentru fiecare conexiune de intrare a modulului de testat (fac, in acest caz), 
+    //     se prevede un semnal de tip reg cu acelasi nume si pe acelasi numar de biti
+    reg x, y, ci;
+    // Pentru fiecare conexiune de iesire a modulului de testat (declarata ca output sau output reg), 
+    //     se prevede un semnal de tip wire cu acelasi nume si pe acelasi numar de biti
+    wire co, z;
+
+    // Construirea instantei modulului de testat; fiecarei conexiuni a modulului de testat i se asociaza
+    //     un semnal (in cazul intrarilor sau iesirilor) sau o expresie (in cazul intrarilor); in cazul 
+    //     instantei dintr-un modul testbench fiecarei conexiuni i se asociaza semnalul cu acelasi nume
+    fac cut (.x(x), .y(y), .ci(ci), .co(co), .z(z));
+
+    // Variabila contor, de tip integer
+    integer k;
+    initial begin
+        // Urmatoarele 2 linii genereaza tabelul de adevar al modulului afisat in fereastra Transcript
+        $display("Time\tx\ty\tci\t\tco\tz");
+        $monitor("%0t\t%b\t%b\t%b\t\t%b\t%b", $time, x, y, ci, co, z);
+        
+        // Generarea exhaustiva a tuturor configuratiilor de intrare (modulul fac are 3 biti de intrare: x, 
+        //     y, ci, in consecinta exista 2^3 = 8 configuratii posibile la intrarile modulului)
+        for (k = 0; k < 8; k = k + 1) begin
+            // Doar ultimii 3 biti ai intregului k sunt preluati de semnalele de tip reg x, y si ci
+            {x, y, ci} = k;
+            // Adaugarea unei intarzieri artificiale; din considerente de vizualizare a rezultatelor simularii
+            #10; 
+        end
+    end
+endmodule
+
+//6

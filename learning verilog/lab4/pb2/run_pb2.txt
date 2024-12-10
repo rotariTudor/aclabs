@@ -1,0 +1,29 @@
+# Add all Verilog source files, separated by spaces
+set sourcefiles {pb2.v}
+
+# Set the name of the top module
+set topmodule counter_tb
+
+###################################################
+##### DO NOT MODIFY THE SCRIPT BELOW THIS LINE ####
+###################################################
+
+# Quit current simulation if any
+quit -sim
+
+# Empty the work library if present
+if {[file exists work]} {vdel -all}
+# Create a new work library
+vlib work
+
+# Run the compiler
+set result [catch {vlog $sourcefiles} errmsg]
+if {$result != 0} {
+    puts "Correct the compilation errors: $errmsg"
+    return
+}
+
+vsim -voptargs=+acc $topmodule
+
+run -all
+quit -sim

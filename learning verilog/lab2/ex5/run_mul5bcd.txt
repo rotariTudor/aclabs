@@ -1,0 +1,30 @@
+# add all Verilog source files, separated by spaces
+set sourcefiles {mul5bcd.v}
+
+# set name of the top module
+set topmodule mul5bcd_tb
+
+###################################################
+#####DO NOT MODIFY THE SCRIPT BELOW THIS LINE#####
+###################################################
+
+# quit current simulation if any
+quit -sim
+
+# empty the work library if present
+if [file exists work] {vdel -all}
+# create a new work library
+vlib work
+
+# run the compiler
+if [catch {vlog $sourcefiles}] {
+    puts "Correct the compilation errors."
+    return
+}
+
+# simulate the top module
+vsim -voptargs=+acc $topmodule
+
+# run simulation
+run -all
+quit -sim
